@@ -10,7 +10,5 @@ data class Day(
     @SerializedName("avghumidity")
     val avgHumidity: Double,
     @SerializedName("maxwind_kph")
-    val maxWindKph: Double,
-    @SerializedName("wind_dir")
-    val windDir: String
+    val maxWindKph: Double
 )
