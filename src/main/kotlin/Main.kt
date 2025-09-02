@@ -7,6 +7,8 @@ import org.example.weatherapp.model.FinalDayData
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
+import okhttp3.OkHttpClient
+import java.util.concurrent.TimeUnit
 
 fun main() = runBlocking {
     // get the API key from an environment variable
@@ -35,11 +37,20 @@ fun main() = runBlocking {
 
     val allWeatherData = mutableMapOf<String, FinalDayData>()
 
+    // create a custom OkHttpClient
+    val okHttpClient = OkHttpClient.Builder()
+        .connectTimeout(30, TimeUnit.SECONDS)
+        .readTimeout(30, TimeUnit.SECONDS)
+        .writeTimeout(30, TimeUnit.SECONDS)
+        .build()
+
+
     // build the Retrofit instance
     val gson = GsonBuilder().setLenient().create()
     val retrofit = Retrofit.Builder()
         .baseUrl("https://api.weatherapi.com/v1/")
         .addConverterFactory(GsonConverterFactory.create(gson))
+        .client(okHttpClient)
         .build()
 
     val service = retrofit.create(WeatherApiService::class.java)
@@ -74,6 +85,9 @@ fun main() = runBlocking {
 
     // format and print the table to STDOUT
     printWeatherTable(allWeatherData)
+
+    // terminate thread manually
+    okHttpClient.dispatcher.executorService.shutdown()
 }
 
 fun printWeatherTable(data: Map<String, FinalDayData>) {
