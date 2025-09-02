@@ -6,6 +6,7 @@ import org.example.weatherapp.api.WeatherApiService
 import org.example.weatherapp.model.FinalDayData
 import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
+import java.io.File
 
 fun main() = runBlocking {
     // get the API key from an environment variable
@@ -13,7 +14,25 @@ fun main() = runBlocking {
         println("Error: WEATHER_API_KEY environment variable not set.")
         return@runBlocking
     }
-    val cities = listOf("Chisinau", "Madrid", "Kyiv", "Amsterdam")
+
+    // fetch cities from the file
+    val cities = try {
+        val fileUrl = object {}.javaClass.getResource("/cities.txt")
+        if (fileUrl == null) {
+            println("Error: cities.txt file not found.")
+            return@runBlocking
+        }
+        File(fileUrl.toURI()).readLines().map { it.trim() }.filter { it.isNotEmpty() }
+    } catch (e: Exception) {
+        println("Error reading cities.txt: ${e.message}")
+        return@runBlocking
+    }
+
+    if (cities.isEmpty()) {
+        println("The cities.txt file is empty or could not be read.")
+        return@runBlocking
+    }
+
     val allWeatherData = mutableMapOf<String, FinalDayData>()
 
     // build the Retrofit instance
