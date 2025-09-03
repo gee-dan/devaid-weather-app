@@ -8,9 +8,10 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 import okhttp3.OkHttpClient
+import org.example.weatherapp.model.Hour
 import java.util.concurrent.TimeUnit
 
-fun main() = runBlocking {
+fun main(args: Array<String>) = runBlocking {
     // get the API key from an environment variable
     val apiKey = System.getenv("WEATHER_API_KEY") ?: run {
         println("Error: WEATHER_API_KEY environment variable not set.")
@@ -44,6 +45,7 @@ fun main() = runBlocking {
         .writeTimeout(30, TimeUnit.SECONDS)
         .build()
 
+    val useFreqWindDir = args.contains("--freq-wind-dir")
 
     // build the Retrofit instance
     val gson = GsonBuilder().setLenient().create()
@@ -62,10 +64,11 @@ fun main() = runBlocking {
             val nextDayForecast = response.forecast.forecastday.getOrNull(1)
 
             if (nextDayForecast != null) {
-                val maxWindKph = nextDayForecast.day.maxWindKph
-
-                // find the wind direction for the hour with the maximum wind speed
-                val windDir = nextDayForecast.hour.firstOrNull { it.windKph == maxWindKph }?.windDir ?: "N/A"
+                val windDir = if (useFreqWindDir) {
+                    getMostFrequentWindDir(nextDayForecast.hour)
+                } else {
+                    getWindDirFromMaxSpeed(nextDayForecast.hour)
+                }
 
                 // output data
                 val cityData = FinalDayData(
@@ -121,4 +124,17 @@ fun printWeatherTable(data: Map<String, FinalDayData>) {
 
     // print table footer
     println(separator)
+}
+
+// determines the wind direction at the hour with the highest wind speed
+private fun getWindDirFromMaxSpeed(hours: List<Hour>): String {
+    val maxWindKph = hours.maxOfOrNull { it.windKph } ?: 0.0
+    return hours.firstOrNull { it.windKph == maxWindKph }?.windDir ?: "N/A"
+}
+// finds the most frequently occurring wind direction over the day
+private fun getMostFrequentWindDir(hours: List<Hour>): String {
+    return hours.groupingBy { it.windDir }
+        .eachCount()
+        .maxWithOrNull(Comparator.comparingInt { it.value })
+        ?.key ?: "N/A"
 }
